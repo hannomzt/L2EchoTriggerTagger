@@ -12,7 +12,6 @@ class L2Trigger(object):
         self.criticalAmplitude = 0.68*self.GetCriticalAmplitude(self.fir_filtered_tpl)
         self.plot=plot
         self.verbose=verbose
-        if self.plot: self.fig, self.ax = plt.subplots(dpi=140)
         if self.verbose: print("Critical Amplitude:", self.criticalAmplitude)
         
     def MakeFIRfilteredTemplate(self,input_pulse_shapes,trig):
@@ -88,6 +87,7 @@ class L2Trigger(object):
     
     def VetoEchoTriggers(self,L1TPs):
         
+        if self.plot: self.fig, self.ax = plt.subplots(dpi=140)
         if self.verbose: 
             print("%s L1Trigger primitives before veto:" % len(L1TPs))
             print(L1TPs)
@@ -105,7 +105,7 @@ class L2Trigger(object):
             ScaledFirFiltTpl = self.fir_filtered_tpl*CritL1TPs[0]['max amp']
             ScaledFirFilTpltTimestamps = np.arange(CritL1TPs[0]['peak time']-self.timingOffset,CritL1TPs[0]['peak time']+self.timingOffset,16)
             if self.plot: self.ax.plot(ScaledFirFilTpltTimestamps,ScaledFirFiltTpl[0],
-                                       linestyle="dotted",label="FIR-Filtered TPL, "+str(CritL1TPs[0]['max amp']))
+                                       label="FIR-Filtered TPL, "+str(CritL1TPs[0]['max amp']))
             L1TPs = [L1TP for L1TP in L1TPs if not self.isEcho(ScaledFirFiltTpl,ScaledFirFilTpltTimestamps,CritL1TPs[0],L1TP)]
             CritL1TPs=[L1TP for L1TP in L1TPs if L1TP['max amp'] > self.criticalAmplitude]     
             CritL1TPs = np.flip(np.sort(CritL1TPs))
