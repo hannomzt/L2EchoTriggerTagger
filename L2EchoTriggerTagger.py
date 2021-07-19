@@ -76,25 +76,35 @@ class L2Trigger(object):
                     inWindow=False
                     winhighedge=ScaledFirFilTpltTimestamps[sample]
                     #Check if current trigger is within echo trigger expectation window
-                    if L1TP['peak time'] > winlowedge and L1TP['peak time'] < winhighedge:
+                    if L1TP[self.timestamp] > winlowedge and L1TP[self.timestamp] < winhighedge:
                         timestampsInWindow=(ScaledFirFilTpltTimestamps > winlowedge) & (ScaledFirFilTpltTimestamps < winhighedge)
                         echoamp=np.max(ScaledFirFiltTpl[FIRch][timestampsInWindow])
                         #Check if current trigger has amplitude compatible with echo trigger expectation
-                        if L1TP['max amp'] < 2*echoamp:
+                        if L1TP[self.amplitude] < 2*echoamp:
                             if self.plot: self.ax.add_patch(Rectangle((winlowedge, 0), winhighedge-winlowedge, 2*echoamp,alpha=0.5,color="red"))
                             return True
         return False
     
     def VetoEchoTriggers(self,L1TPs):
         
-        if self.plot: self.fig, self.ax = plt.subplots(dpi=140)
+        self.amplitude=L1TPs.dtype.names[0]
+        self.timestamp=L1TPs.dtype.names[1]
+        
+        if self.plot: 
+            self.fig, self.ax = plt.subplots(dpi=140)
+            self.ax.plot(L1TPs[self.timestamp],L1TPs[self.amplitude],linestyle="None",marker="x",
+              color="black",label="L1 Trigger Primitives")
         if self.verbose: 
             print("%s L1Trigger primitives before veto:" % len(L1TPs))
             print(L1TPs)
         
-        #Find critical triggers with large amplitudes which could cause echo triggers
-        CritL1TPs=[L1TP for L1TP in L1TPs if L1TP['max amp'] > self.criticalAmplitude]     
+        #Find critical triggers with large amplitudes which could cause echo triggers and sort them by amplitude
+        CritL1TPs=[L1TP for L1TP in L1TPs if L1TP[self.amplitude] > self.criticalAmplitude]     
         CritL1TPs = np.flip(np.sort(CritL1TPs))
+        
+        if self.verbose: 
+            print("%s Critical L1Trigger primitives before veto:" % len(CritL1TPs))
+            print(CritL1TPs)
         
         #If no critical trigger amplitudes are found, we don't need to veto anything
         if len(CritL1TPs) == 0: return(L1TPs)
@@ -102,12 +112,12 @@ class L2Trigger(object):
         #Loop over critical amplitude triggers and scale FIR filtered templates by amplitude.
         #Remove triggers which are in echo trigger expectation window according to scaled FIR filtered template.
         while len(CritL1TPs) > 0:
-            ScaledFirFiltTpl = self.fir_filtered_tpl*CritL1TPs[0]['max amp']
-            ScaledFirFilTpltTimestamps = np.arange(CritL1TPs[0]['peak time']-self.timingOffset,CritL1TPs[0]['peak time']+self.timingOffset,16)
+            ScaledFirFiltTpl = self.fir_filtered_tpl*CritL1TPs[0][self.amplitude]
+            ScaledFirFilTpltTimestamps = np.arange(CritL1TPs[0][self.timestamp]-self.timingOffset,CritL1TPs[0][self.timestamp]+self.timingOffset,16)
             if self.plot: self.ax.plot(ScaledFirFilTpltTimestamps,ScaledFirFiltTpl[0],
-                                       label="FIR-Filtered TPL, "+str(CritL1TPs[0]['max amp']))
+                                       label="FIR-Filtered TPL, "+str(CritL1TPs[0][self.amplitude]))
             L1TPs = [L1TP for L1TP in L1TPs if not self.isEcho(ScaledFirFiltTpl,ScaledFirFilTpltTimestamps,CritL1TPs[0],L1TP)]
-            CritL1TPs=[L1TP for L1TP in L1TPs if L1TP['max amp'] > self.criticalAmplitude]     
+            CritL1TPs=[CritL1TP for CritL1TP in CritL1TPs if not self.isEcho(ScaledFirFiltTpl,ScaledFirFilTpltTimestamps,CritL1TPs[0],CritL1TP)]
             CritL1TPs = np.flip(np.sort(CritL1TPs))
             CritL1TPs = np.delete(CritL1TPs,0)
         
