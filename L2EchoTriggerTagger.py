@@ -87,8 +87,8 @@ class L2Trigger(object):
     
     def VetoEchoTriggers(self,L1TPs):
         
-        self.amplitude=L1TPs.dtype.names[0]
-        self.timestamp=L1TPs.dtype.names[1]
+        self.amplitude=[key for key in L1TPs.dtype.names if "amp" in key][0]
+        self.timestamp=[key for key in L1TPs.dtype.names if "time" in key][0]
         
         if self.plot: 
             self.fig, self.ax = plt.subplots(dpi=140)
@@ -105,9 +105,6 @@ class L2Trigger(object):
         if self.verbose: 
             print("%s Critical L1Trigger primitives before veto:" % len(CritL1TPs))
             print(CritL1TPs)
-        
-        #If no critical trigger amplitudes are found, we don't need to veto anything
-        if len(CritL1TPs) == 0: return(L1TPs)
         
         #Loop over critical amplitude triggers and scale FIR filtered templates by amplitude.
         #Remove triggers which are in echo trigger expectation window according to scaled FIR filtered template.
